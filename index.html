@@ -35,26 +35,32 @@
             background-image: linear-gradient(180deg, #e5e5ea 0%, #f2f2f4 20%);
         }
 
-        /* 頂部導航 */
+        /* 簡化後的頂部導航 */
         header {
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-end; /* 按鈕靠右 */
             align-items: center;
             padding: 20px;
-            padding-top: 40px;
+            padding-top: 30px;
         }
         
-        .icon-btn {
-            background: rgba(255, 255, 255, 0.6);
+        .add-product-btn {
+            background: #000000;
+            color: #ffffff;
             border: none;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            border-radius: var(--radius-lg);
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 600;
             display: flex;
             align-items: center;
-            justify-content: center;
-            font-size: 18px;
+            gap: 6px;
             cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .add-product-btn:active {
+            transform: scale(0.95);
         }
 
         /* 搜尋列 */
@@ -185,7 +191,7 @@
             line-height: 1.3;
         }
 
-        /* 詳情與價格彈窗 */
+        /* 詳情與價格彈窗 / 新增商品彈窗 */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -265,10 +271,11 @@
 </head>
 <body>
 
+    <!-- 簡化後的頂部，只保留右側新增商品按鈕 -->
     <header>
-        <div style="font-weight: 600; font-size: 18px;">Back</div>
-        <button class="icon-btn">☰</button>
-        <div style="font-weight: 600;">🛒</div>
+        <button class="add-product-btn" onclick="openNewProductModal()">
+            <span>+</span> 新增商品
+        </button>
     </header>
 
     <div class="search-container">
@@ -314,11 +321,12 @@
         <!-- 動態渲染區域 -->
     </div>
 
+    <!-- 1. 詳情與價格彈窗 -->
     <div class="modal-overlay" id="detailModal">
         <div class="modal-content">
             <div class="modal-header">
                 <h2 class="modal-title" id="modalItemName">商品名稱</h2>
-                <button class="close-btn" onclick="closeModal()">✕</button>
+                <button class="close-btn" onclick="closeModal('detailModal')">✕</button>
             </div>
             
             <p style="color: #666; font-size: 14px; margin-bottom: 8px;">澳門超市最平 Top 3 推薦 👇</p>
@@ -336,8 +344,25 @@
         </div>
     </div>
 
+    <!-- 2. 新增全新商品彈窗 -->
+    <div class="modal-overlay" id="newProductModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">新增新商品</h2>
+                <button class="close-btn" onclick="closeModal('newProductModal')">✕</button>
+            </div>
+            
+            <div class="add-record-form" style="margin-top: 0;">
+                <input type="text" class="form-input" id="newProdName" placeholder="商品名稱 (例: 陽光檸檬茶 250ml)">
+                <input type="text" class="form-input" id="newProdCategory" placeholder="分類 (例: Drinks, Bread, Snacks)">
+                <input type="text" class="form-input" id="newProdImage" placeholder="圖片網址 (可留空使用預設圖)">
+                <button class="submit-btn" onclick="createNewProduct()">建立商品</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // Supabase API 配置（已設定你的專屬專案鏈結與 Key）
+        // Supabase API 配置
         const SUPABASE_URL = "https://wccodlmylqbmuxhixlvf.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjY29kbG15bHFibXV4aGl4bHZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3MzU1MzQsImV4cCI6MjEwNzMxMTUzNH0.S1K1-Wq25JNz8v_8Y6bcyN0lXPkI57fwkCj0OEf_lbI";
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -345,7 +370,7 @@
         let products = [];
         let currentActiveProductId = null;
 
-        // 從 Supabase 抓取數據 (已根據你後台設定調用 product 單數名稱)
+        // 從 Supabase 抓取數據
         async function fetchProducts() {
             const { data, error } = await _supabase
                 .from('product')
@@ -386,7 +411,7 @@
             grid.innerHTML = '';
 
             if (list.length === 0) {
-                grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #8e8e93; padding: 20px 0;">資料庫暫無商品，請先在 Supabase 新增品項！</p>';
+                grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #8e8e93; padding: 40px 0;">資料庫暫無商品<br/>請點擊右上角「+ 新增商品」！</p>';
                 return;
             }
             
@@ -396,7 +421,7 @@
                 
                 const card = document.createElement('div');
                 card.className = 'item-card';
-                card.onclick = () => openModal(product.id);
+                card.onclick = () => openDetailModal(product.id);
                 
                 card.innerHTML = `
                     <img src="${product.image}" class="item-image" alt="item">
@@ -416,7 +441,8 @@
             renderProducts(filtered);
         }
 
-        function openModal(productId) {
+        // 打開詳情彈窗
+        function openDetailModal(productId) {
             currentActiveProductId = productId;
             const product = products.find(p => p.id === productId);
             document.getElementById('modalItemName').innerText = product.name;
@@ -447,20 +473,27 @@
                 });
             }
 
-            document.getElementById('detailModal').style.display = 'flex';
-            setTimeout(() => {
-                document.getElementById('detailModal').classList.add('active');
-            }, 10);
+            showModal('detailModal');
         }
 
-        function closeModal() {
-            document.getElementById('detailModal').classList.remove('active');
-            setTimeout(() => {
-                document.getElementById('detailModal').style.display = 'none';
-            }, 300);
+        // 打開新增全新商品彈窗
+        function openNewProductModal() {
+            showModal('newProductModal');
         }
 
-        // 新增價格紀錄寫入 Supabase
+        function showModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.style.display = 'flex';
+            setTimeout(() => modal.classList.add('active'), 10);
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.classList.remove('active');
+            setTimeout(() => modal.style.display = 'none', 300);
+        }
+
+        // 寫入 Supabase：新增商品價格紀錄
         async function addPriceRecord() {
             const shop = document.getElementById('newShop').value.trim();
             const price = parseFloat(document.getElementById('newPrice').value);
@@ -472,7 +505,6 @@
 
             const today = new Date().toISOString().split('T')[0];
 
-            // 寫入 price_history Table
             const { error } = await _supabase
                 .from('price_history')
                 .insert([
@@ -487,9 +519,38 @@
             document.getElementById('newShop').value = '';
             document.getElementById('newPrice').value = '';
             
-            // 重新刷新頁面及 Modal 數據
             await fetchProducts();
-            openModal(currentActiveProductId);
+            openDetailModal(currentActiveProductId);
+        }
+
+        // 寫入 Supabase：建立全新商品
+        async function createNewProduct() {
+            const name = document.getElementById('newProdName').value.trim();
+            const category = document.getElementById('newProdCategory').value.trim() || 'Drinks';
+            const image = document.getElementById('newProdImage').value.trim();
+
+            if (!name) {
+                alert("請輸入商品名稱！");
+                return;
+            }
+
+            const { error } = await _supabase
+                .from('product')
+                .insert([
+                    { name: name, category: category, image: image }
+                ]);
+
+            if (error) {
+                alert("建立商品失敗: " + error.message);
+                return;
+            }
+
+            document.getElementById('newProdName').value = '';
+            document.getElementById('newProdCategory').value = '';
+            document.getElementById('newProdImage').value = '';
+
+            closeModal('newProductModal');
+            await fetchProducts();
         }
 
         // 頁面初始化
