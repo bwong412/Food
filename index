@@ -1,1 +1,480 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>超市格價筆記</title>
+    <style>
+        :root {
+            --bg-color: #f2f2f4;
+            --card-bg: #ffffff;
+            --text-main: #000000;
+            --text-muted: #8e8e93;
+            --accent: #000000;
+            --radius-lg: 24px;
+            --radius-md: 16px;
+            --radius-sm: 12px;
+        }
 
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            /* 模擬手機App在桌面瀏覽器的顯示 */
+            max-width: 480px;
+            margin: 0 auto;
+            min-height: 100vh;
+            position: relative;
+            background-image: linear-gradient(180deg, #e5e5ea 0%, #f2f2f4 20%);
+        }
+
+        /* 頂部導航 */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            padding-top: 40px;
+        }
+        
+        .icon-btn {
+            background: rgba(255, 255, 255, 0.6);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        /* 搜尋列 */
+        .search-container {
+            padding: 0 20px;
+            margin-bottom: 24px;
+        }
+        .search-bar {
+            background: transparent;
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: var(--radius-lg);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .search-bar input {
+            border: none;
+            background: transparent;
+            width: 100%;
+            font-size: 16px;
+            outline: none;
+        }
+
+        /* 分類橫向滑動 */
+        .categories {
+            display: flex;
+            gap: 16px;
+            padding: 0 20px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            margin-bottom: 32px;
+        }
+        .categories::-webkit-scrollbar { display: none; }
+        
+        .category-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        .category-icon {
+            width: 64px;
+            height: 64px;
+            background: var(--card-bg);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.3s;
+        }
+        .category-item.active .category-icon {
+            background: var(--accent);
+            color: #fff;
+        }
+        .category-item.active .category-icon svg {
+            fill: #fff;
+        }
+        .category-text {
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        /* 商品列表區域 */
+        .section-header {
+            padding: 0 20px;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+        .section-header h1 {
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: -1px;
+        }
+        .section-header span {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .item-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            padding: 0 20px 40px;
+        }
+
+        .item-card {
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            transition: transform 0.2s;
+        }
+        .item-card:active {
+            transform: scale(0.96);
+        }
+        .item-image {
+            width: 100%;
+            height: 120px;
+            object-fit: contain;
+            margin-bottom: 12px;
+        }
+        .item-price-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+        .item-price {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .add-btn {
+            color: var(--text-muted);
+            background: none;
+            border: none;
+            font-size: 20px;
+        }
+        .item-title {
+            font-size: 14px;
+            color: var(--text-muted);
+            line-height: 1.3;
+        }
+
+        /* 詳情與歷史價格 Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.4);
+            display: none;
+            justify-content: center;
+            align-items: flex-end;
+            z-index: 100;
+        }
+        .modal-content {
+            background: #fff;
+            width: 100%;
+            max-width: 480px;
+            border-radius: 32px 32px 0 0;
+            padding: 32px 24px;
+            transform: translateY(100%);
+            transition: transform 0.3s ease-out;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+        .modal-overlay.active .modal-content {
+            transform: translateY(0);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .modal-title { font-size: 24px; font-weight: 700; }
+        .close-btn { background: #f2f2f2; border: none; padding: 8px 12px; border-radius: 50%; cursor: pointer;}
+        
+        .history-list {
+            margin-top: 20px;
+        }
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 16px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .shop-info { display: flex; flex-direction: column; }
+        .shop-name { font-weight: 600; font-size: 16px; }
+        .shop-date { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+        .shop-price { font-weight: 700; font-size: 18px; }
+        
+        .rank-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        .rank-1 { background: #e8f5e9; color: #2e7d32; }
+        .rank-2 { background: #fff3e0; color: #ef6c00; }
+        .rank-3 { background: #ffebee; color: #c62828; }
+
+        /* 新增紀錄表單 */
+        .add-record-form {
+            margin-top: 24px;
+            background: #f9f9f9;
+            padding: 16px;
+            border-radius: var(--radius-md);
+        }
+        .form-input {
+            width: 100%; padding: 12px; margin-bottom: 12px;
+            border: 1px solid #e0e0e0; border-radius: 8px;
+            font-size: 14px;
+        }
+        .submit-btn {
+            width: 100%; padding: 14px;
+            background: var(--accent); color: white;
+            border: none; border-radius: 8px;
+            font-size: 16px; font-weight: 600; cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 頂部 -->
+    <header>
+        <div style="font-weight: 600; font-size: 18px;">Back</div>
+        <button class="icon-btn">☰</button>
+        <div style="font-weight: 600;">🛒</div>
+    </header>
+
+    <!-- 搜尋列 -->
+    <div class="search-container">
+        <div class="search-bar">
+            <span>🔍</span>
+            <input type="text" placeholder="What are you looking for?">
+        </div>
+    </div>
+
+    <!-- 分類 -->
+    <div class="categories">
+        <div class="category-item active">
+            <div class="category-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="#000"><path d="M7 2v20h10V2H7zm8 18H9V6h6v14z"/></svg>
+            </div>
+            <span class="category-text">Drinks</span>
+        </div>
+        <div class="category-item">
+            <div class="category-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="#000"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
+            </div>
+            <span class="category-text">Bread</span>
+        </div>
+        <div class="category-item">
+            <div class="category-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="#000"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12z"/></svg>
+            </div>
+            <span class="category-text">Snacks</span>
+        </div>
+        <div class="category-item">
+            <div class="category-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="#000"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/></svg>
+            </div>
+            <span class="category-text">Staples</span>
+        </div>
+    </div>
+
+    <!-- 標題與列表 -->
+    <div class="section-header">
+        <h1>Drinks</h1>
+        <span>2 items</span>
+    </div>
+
+    <div class="item-grid" id="itemGrid">
+        <!-- JS 動態生成商品卡片 -->
+    </div>
+
+    <!-- 詳情與歷史價格 Modal -->
+    <div class="modal-overlay" id="detailModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalItemName">商品名稱</h2>
+                <button class="close-btn" onclick="closeModal()">✕</button>
+            </div>
+            
+            <p style="color: #666; font-size: 14px; margin-bottom: 8px;">澳門超市最平 Top 3 推薦 👇</p>
+            
+            <div class="history-list" id="historyList">
+                <!-- JS 動態生成歷史價格 -->
+            </div>
+
+            <div class="add-record-form">
+                <h3 style="font-size: 16px; margin-bottom: 12px;">+ 新增價格紀錄</h3>
+                <input type="text" class="form-input" id="newShop" placeholder="輸入超市名稱 (例: 新苗, 來來)">
+                <input type="number" class="form-input" id="newPrice" placeholder="輸入價格 ($)">
+                <button class="submit-btn" onclick="addPriceRecord()">儲存紀錄</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 模擬數據庫 (預備畀你日後轉做 Supabase Data)
+        let products = [
+            {
+                id: 1,
+                name: "維他純牛奶 1L",
+                image: "https://cdn-icons-png.flaticon.com/512/2674/2674486.png", // 暫代圖片
+                history: [
+                    { shop: "新苗超市", price: 19.0, date: "2026-10-10" },
+                    { shop: "來來超市", price: 21.5, date: "2026-09-28" },
+                    { shop: "百佳超級市場", price: 20.0, date: "2026-09-15" },
+                    { shop: "大創", price: 22.0, date: "2026-08-01" }
+                ]
+            },
+            {
+                id: 2,
+                name: "可口可樂 330ml (排裝)",
+                image: "https://cdn-icons-png.flaticon.com/512/3014/3014502.png", // 暫代圖片
+                history: [
+                    { shop: "來來超市", price: 18.5, date: "2026-10-11" },
+                    { shop: "新苗超市", price: 19.9, date: "2026-10-05" }
+                ]
+            }
+        ];
+
+        let currentActiveProductId = null;
+
+        // 渲染首頁商品卡片
+        function renderProducts() {
+            const grid = document.getElementById('itemGrid');
+            grid.innerHTML = '';
+            
+            products.forEach(product => {
+                // 搵出最新或者最平嘅價錢顯示喺封面
+                const lowestPrice = Math.min(...product.history.map(h => h.price));
+                
+                const card = document.createElement('div');
+                card.className = 'item-card';
+                card.onclick = () => openModal(product.id);
+                
+                card.innerHTML = `
+                    <img src="${product.image}" class="item-image" alt="item">
+                    <div class="item-price-row">
+                        <span class="item-price">$${lowestPrice.toFixed(1)}</span>
+                        <button class="add-btn">+</button>
+                    </div>
+                    <div class="item-title">${product.name}</div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // 打開詳情 Modal 並計算 Top 3 最平
+        function openModal(productId) {
+            currentActiveProductId = productId;
+            const product = products.find(p => p.id === productId);
+            document.getElementById('modalItemName').innerText = product.name;
+            
+            const historyList = document.getElementById('historyList');
+            historyList.innerHTML = '';
+
+            // 核心邏輯：將歷史價格按價錢由低至高排序
+            const sortedHistory = [...product.history].sort((a, b) => a.price - b.price);
+
+            sortedHistory.forEach((record, index) => {
+                let rankBadge = '';
+                if (index === 0) rankBadge = '<span class="rank-badge rank-1">🏆 最平</span>';
+                else if (index === 1) rankBadge = '<span class="rank-badge rank-2">🥈 第2平</span>';
+                else if (index === 2) rankBadge = '<span class="rank-badge rank-3">🥉 第3平</span>';
+
+                historyList.innerHTML += `
+                    <div class="history-item">
+                        <div class="shop-info">
+                            <span class="shop-name">${rankBadge} ${record.shop}</span>
+                            <span class="shop-date">最後記錄: ${record.date}</span>
+                        </div>
+                        <div class="shop-price">$${record.price.toFixed(1)}</div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('detailModal').style.display = 'flex';
+            setTimeout(() => {
+                document.getElementById('detailModal').classList.add('active');
+            }, 10);
+        }
+
+        function closeModal() {
+            document.getElementById('detailModal').classList.remove('active');
+            setTimeout(() => {
+                document.getElementById('detailModal').style.display = 'none';
+            }, 300);
+        }
+
+        // 模擬新增紀錄功能
+        function addPriceRecord() {
+            const shop = document.getElementById('newShop').value;
+            const price = parseFloat(document.getElementById('newPrice').value);
+            
+            if(!shop || isNaN(price)) {
+                alert("請輸入完整的超市名稱及價格！");
+                return;
+            }
+
+            const productIndex = products.findIndex(p => p.id === currentActiveProductId);
+            const today = new Date().toISOString().split('T')[0];
+
+            products[productIndex].history.push({
+                shop: shop,
+                price: price,
+                date: today
+            });
+
+            /* 
+            === Supabase 整合提示 ===
+            日後喺度可以加入 Supabase 代碼，例如：
+            const { data, error } = await supabase
+              .from('price_history')
+              .insert([
+                { product_id: currentActiveProductId, shop_name: shop, price: price, record_date: today }
+              ])
+            */
+
+            document.getElementById('newShop').value = '';
+            document.getElementById('newPrice').value = '';
+            
+            // 重新整理畫面
+            openModal(currentActiveProductId);
+            renderProducts();
+        }
+
+        // 初始化
+        renderProducts();
+
+    </script>
+</body>
+</html>
