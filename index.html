@@ -288,9 +288,15 @@
         </div>
     </div>
 
-    <!-- 分類橫向導航 (已替換為 Groceries 及新增 Others) -->
+    <!-- 分類橫向導航 (已加入 All 為預設選項) -->
     <div class="categories">
-        <div class="category-item active" onclick="filterByCategory('Drinks', this)">
+        <div class="category-item active" onclick="filterByCategory('All', this)">
+            <div class="category-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="#000"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
+            </div>
+            <span class="category-text">All</span>
+        </div>
+        <div class="category-item" onclick="filterByCategory('Drinks', this)">
             <div class="category-icon">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="#000"><path d="M7 2v20h10V2H7zm8 18H9V6h6v14z"/></svg>
             </div>
@@ -323,7 +329,7 @@
     </div>
 
     <div class="section-header">
-        <h1 id="currentCategoryTitle">Drinks</h1>
+        <h1 id="currentCategoryTitle">All</h1>
         <span id="itemCount">0 items</span>
     </div>
 
@@ -390,7 +396,7 @@
 
         let products = [];
         let currentActiveProductId = null;
-        let currentCategory = 'Drinks';
+        let currentCategory = 'All'; // 預設改為 All
         let longTouchTimer = null;
 
         async function fetchProducts() {
@@ -447,7 +453,11 @@
         function renderProducts(filteredProducts = null) {
             let list = filteredProducts;
             if(!list) {
-                list = products.filter(p => p.category.toLowerCase() === currentCategory.toLowerCase());
+                if (currentCategory.toLowerCase() === 'all') {
+                    list = products; // 展示全部商品
+                } else {
+                    list = products.filter(p => p.category.toLowerCase() === currentCategory.toLowerCase());
+                }
             }
 
             const grid = document.getElementById('itemGrid');
@@ -690,8 +700,14 @@
 
             closeModal('newProductModal');
             
-            currentCategory = category;
-            document.getElementById('currentCategoryTitle').innerText = category;
+            // 建立完成後切換回 All 檢視所有商品（或你選擇的分類）
+            currentCategory = 'All';
+            document.getElementById('currentCategoryTitle').innerText = 'All';
+            
+            // 更新選中狀態
+            document.querySelectorAll('.category-item').forEach(el => el.classList.remove('active'));
+            document.querySelector('.category-item').classList.add('active');
+
             await fetchProducts();
         }
 
